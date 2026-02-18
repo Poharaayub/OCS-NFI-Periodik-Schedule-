@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCS NFI Schedule - by Pohara Ayub</title>
+    <!-- Tailwind CSS untuk styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f7f9fc;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e1e2e9;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="text-[#1c1b1f] pb-12">
+
+    <div id="app">
+        <!-- Header -->
+        <div class="bg-white border-b border-[#e1e2e9] sticky top-0 z-50">
+            <div class="max-w-4xl mx-auto px-4 py-4">
+                <header class="flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-[#6750a4] p-2 rounded-xl text-white shadow-md">
+                            <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-base md:text-xl font-bold tracking-tight text-[#1c1b1f]">OCS NFI Schedule</h1>
+                            <p class="text-[10px] md:text-xs font-medium text-[#49454f]">by Pohara Ayub</p>
+                        </div>
+                    </div>
+                    
+                    <button onclick="downloadExcel()" id="btn-export" disabled class="flex items-center gap-2 px-4 py-2 bg-[#6750a4] text-white rounded-full hover:shadow-md disabled:opacity-40 transition-all font-bold text-xs">
+                        <i data-lucide="download" class="w-4 h-4"></i> <span class="hidden sm:inline">Export CSV</span>
+                    </button>
+                </header>
+
+                <!-- Navigasi Tab -->
+                <div class="flex gap-1 mt-4 bg-[#f3edf7] p-1 rounded-2xl">
+                    <button id="tab-config" onclick="switchTab('config')" class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all bg-white text-[#6750a4] shadow-sm">
+                        <i data-lucide="settings-2" class="w-4 h-4"></i> Konfigurasi
+                    </button>
+                    <button id="tab-tasks" onclick="switchTab('tasks')" class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all text-[#49454f] hover:bg-white/50">
+                        <i data-lucide="clipboard-check" class="w-4 h-4"></i> Daftar Tugas
+                        <span id="task-count" class="ml-1 px-1.5 py-0.5 rounded-md text-[9px] bg-[#eaddff] text-[#21005d]">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <main class="max-w-4xl mx-auto px-4 pt-6">
+            <!-- HALAMAN KONFIGURASI -->
+            <div id="page-config" class="animate-fade-in">
+                <div class="bg-white p-6 rounded-[28px] border border-[#e1e2e9] shadow-sm">
+                    <div class="flex items-center gap-2 mb-6">
+                        <i data-lucide="layout-grid" class="w-5 h-5 text-[#6750a4]"></i>
+                        <h2 class="text-lg font-bold text-[#1d1b20]">Buat Jadwal Baru</h2>
+                    </div>
+                    
+                    <form id="form-generate" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-[#49454f] ml-1 uppercase tracking-wider">Tanggal Mulai</label>
+                                <input type="date" id="startDate" required class="w-full px-4 py-3 rounded-2xl border border-[#c4c6d0] bg-[#f7f9fc] outline-none focus:ring-2 focus:ring-[#6750a4]/20 focus:border-[#6750a4] text-sm transition-all">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-[#49454f] ml-1 uppercase tracking-wider">Area Default</label>
+                                <input type="text" id="areaDefault" placeholder="Misal: Produksi" class="w-full px-4 py-3 rounded-2xl border border-[#c4c6d0] bg-[#f7f9fc] outline-none text-sm transition-all focus:border-[#6750a4]">
+                            </div>
+                        </div>
+
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-[#49454f] ml-1 uppercase tracking-wider">Member Default</label>
+                            <input type="text" id="memberDefault" placeholder="Nama Member" class="w-full px-4 py-3 rounded-2xl border border-[#c4c6d0] bg-[#f7f9fc] outline-none text-sm transition-all focus:border-[#6750a4]">
+                        </div>
+
+                        <div class="bg-[#f3edf7] p-5 rounded-3xl border border-[#eaddff]">
+                            <h3 class="text-xs font-black text-[#6750a4] mb-4 uppercase tracking-widest">Kuota Harian</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div>
+                                    <span class="text-[10px] font-bold text-[#49454f] uppercase mb-2 block text-center">Senin - Jumat</span>
+                                    <div class="flex gap-2" id="quota-weekday">
+                                        <!-- JS akan merender ini -->
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] font-bold text-[#49454f] uppercase mb-2 block text-center">Sabtu</span>
+                                    <div class="flex gap-2" id="quota-saturday">
+                                        <!-- JS akan merender ini -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1">
+                            <div class="flex justify-between items-center ml-1">
+                                <label class="text-xs font-bold text-[#49454f] uppercase tracking-wider">Daftar Pekerjaan</label>
+                                <span class="text-[10px] font-medium text-[#6750a4]">Pisahkan per baris</span>
+                            </div>
+                            <textarea id="rawJobs" required placeholder="Pembersihan Area A&#10;Pengecekan Mesin B..." class="w-full px-4 py-4 h-48 rounded-2xl border border-[#c4c6d0] bg-[#f7f9fc] outline-none text-sm leading-relaxed transition-all focus:border-[#6750a4]"></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full bg-[#6750a4] text-white font-black py-4 rounded-2xl shadow-lg hover:bg-[#4f378b] active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-sm uppercase tracking-widest">
+                            <i data-lucide="plus" class="w-5 h-5"></i> Generate Jadwal
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- HALAMAN DAFTAR TUGAS -->
+            <div id="page-tasks" class="hidden animate-fade-in space-y-4">
+                <div class="bg-white px-5 py-3 rounded-2xl border border-[#e1e2e9] flex items-center gap-3 shadow-sm sticky top-[140px] z-40">
+                    <i data-lucide="search" class="w-4 h-4 text-[#49454f]"></i>
+                    <input type="text" id="searchTask" placeholder="Cari tugas, area, atau member..." class="flex-1 bg-transparent outline-none text-sm text-[#1d1b20] placeholder-[#49454f]/60">
+                </div>
+
+                <div id="task-list" class="space-y-3">
+                    <!-- JS akan merender daftar tugas di sini -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // State management
+        let tasks = [];
+        let weekdayQuota = 2;
+        let saturdayQuota = 4;
+        let activeTab = 'config';
+        let editingId = null;
+        let copyingId = null;
+
+        // Inisialisasi Lucide
+        function initIcons() {
+            lucide.createIcons();
+        }
+
+        // Render tombol kuota
+        function renderQuotaButtons() {
+            const wContainer = document.getElementById('quota-weekday');
+            wContainer.innerHTML = [1, 2, 3, 4].map(num => `
+                <button type="button" onclick="setQuota('weekday', ${num})" class="flex-1 py-2 rounded-xl text-xs font-black transition-all ${weekdayQuota === num ? 'bg-[#6750a4] text-white shadow-md' : 'bg-[#f7f9fc] text-[#49454f] hover:bg-[#eaddff]'}">${num}</button>
+            `).join('');
+
+            const sContainer = document.getElementById('quota-saturday');
+            sContainer.innerHTML = [2, 4, 6, 8].map(num => `
+                <button type="button" onclick="setQuota('saturday', ${num})" class="flex-1 py-2 rounded-xl text-xs font-black transition-all ${saturdayQuota === num ? 'bg-[#6750a4] text-white shadow-md' : 'bg-[#f7f9fc] text-[#49454f] hover:bg-[#eaddff]'}">${num}</button>
+            `).join('');
+        }
+
+        function setQuota(type, val) {
+            if(type === 'weekday') weekdayQuota = val;
+            else saturdayQuota = val;
+            renderQuotaButtons();
+        }
+
+        function switchTab(tab) {
+            activeTab = tab;
+            document.getElementById('page-config').classList.toggle('hidden', tab !== 'config');
+            document.getElementById('page-tasks').classList.toggle('hidden', tab !== 'tasks');
+            
+            const tabConfig = document.getElementById('tab-config');
+            const tabTasks = document.getElementById('tab-tasks');
+            
+            if(tab === 'config') {
+                tabConfig.className = "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all bg-white text-[#6750a4] shadow-sm";
+                tabTasks.className = "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all text-[#49454f] hover:bg-white/50";
+            } else {
+                tabTasks.className = "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all bg-white text-[#6750a4] shadow-sm";
+                tabConfig.className = "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all text-[#49454f] hover:bg-white/50";
+                renderTasks();
+            }
+        }
+
+        // Generate Jadwal
+        document.getElementById('form-generate').onsubmit = (e) => {
+            e.preventDefault();
+            const startStr = document.getElementById('startDate').value;
+            const area = document.getElementById('areaDefault').value || 'Umum';
+            const member = document.getElementById('memberDefault').value || '-';
+            const raw = document.getElementById('rawJobs').value;
+
+            const jobList = raw.split('\n').filter(j => j.trim() !== '');
+            if (jobList.length === 0) return;
+
+            let newTasks = [];
+            let currentDate = new Date(startStr);
+            let jobIndex = 0;
+
+            while (jobIndex < jobList.length) {
+                const dayOfWeek = currentDate.getDay(); 
+                if (dayOfWeek === 0) {
+                    currentDate.setDate(currentDate.getDate() + 1);
+                    continue;
+                }
+
+                const dailyQuota = (dayOfWeek === 6) ? saturdayQuota : weekdayQuota;
+
+                for (let i = 0; i < dailyQuota && jobIndex < jobList.length; i++) {
+                    newTasks.push({
+                        id: Date.now() + Math.random(),
+                        jobName: jobList[jobIndex].trim(),
+                        area: area,
+                        member: member,
+                        date: currentDate.toISOString().split('T')[0],
+                        isWeekly: false
+                    });
+                    jobIndex++;
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            tasks = [...newTasks, ...tasks];
+            document.getElementById('rawJobs').value = '';
+            updateTaskUI();
+            switchTab('tasks');
+        };
+
+        function updateTaskUI() {
+            document.getElementById('task-count').innerText = tasks.length;
+            document.getElementById('btn-export').disabled = tasks.length === 0;
+            renderTasks();
+        }
+
+        function renderTasks() {
+            const container = document.getElementById('task-list');
+            const search = document.getElementById('searchTask').value.toLowerCase();
+            
+            const filtered = tasks.filter(t => 
+                t.jobName.toLowerCase().includes(search) || 
+                t.area.toLowerCase().includes(search) || 
+                t.member.toLowerCase().includes(search)
+            ).sort((a,b) => new Date(a.date) - new Date(b.date));
+
+            if(filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="py-20 flex flex-col items-center justify-center text-[#49454f] bg-white rounded-[32px] border border-dashed border-[#c4c6d0]">
+                        <i data-lucide="calendar" class="w-12 h-12 text-[#6750a4] opacity-30 mb-4"></i>
+                        <p class="text-xs font-black opacity-60 uppercase tracking-[0.2em]">Belum Ada Tugas</p>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = filtered.map(task => {
+                    const d = new Date(task.date);
+                    const day = d.toLocaleDateString('id-ID', { weekday: 'short' });
+                    const dateNum = d.getDate();
+                    const month = d.toLocaleDateString('id-ID', { month: 'short' });
+
+                    if (editingId === task.id) {
+                        return renderEditForm(task);
+                    }
+                    
+                    if (copyingId === task.id) {
+                        return renderCopyForm(task);
+                    }
+
+                    return `
+                        <div class="bg-white rounded-[24px] border border-[#e1e2e9] overflow-hidden shadow-sm animate-fade-in hover:border-[#c4c6d0] transition-all">
+                            <div class="p-4 flex gap-4">
+                                <div class="flex flex-col items-center justify-center bg-[#f3edf7] rounded-2xl p-2 w-[65px] h-[65px] shrink-0 border border-[#eaddff]">
+                                    <span class="text-[9px] font-black text-[#6750a4] uppercase">${day}</span>
+                                    <span class="text-xl font-black text-[#1d1b20]">${dateNum}</span>
+                                    <span class="text-[8px] font-bold text-[#49454f] uppercase">${month}</span>
+                                </div>
+                                <div class="flex-1 min-w-0 pt-1">
+                                    <div class="flex flex-col gap-1.5">
+                                        ${task.isWeekly ? `
+                                            <div class="flex">
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[8px] font-black uppercase tracking-wider border border-emerald-200">
+                                                    <i data-lucide="refresh-cw" class="w-2 h-2"></i> Mingguan
+                                                </span>
+                                            </div>
+                                        ` : ''}
+                                        <h3 class="font-bold text-[#1d1b20] text-sm break-words whitespace-pre-wrap">${task.jobName}</h3>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2 mt-3">
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#f1f3f9] text-[#44474f] text-[10px] font-bold">
+                                            <i data-lucide="map-pin" class="w-3 h-3"></i> ${task.area}
+                                        </span>
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#eaddff] text-[#21005d] text-[10px] font-bold">
+                                            <i data-lucide="user" class="w-3 h-3"></i> ${task.member}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col gap-1 shrink-0 pt-1">
+                                    <div class="flex flex-col items-center bg-[#f7f9fc] rounded-2xl p-1 border border-[#e1e2e9]">
+                                        <button onclick="startCopy(${task.id})" class="p-2 text-[#49454f] hover:text-[#6750a4] hover:bg-white rounded-xl transition-all"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                                        <button onclick="startEdit(${task.id})" class="p-2 text-[#49454f] hover:text-[#6750a4] hover:bg-white rounded-xl transition-all"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                                        <button onclick="deleteTask(${task.id})" class="p-2 text-[#ba1a1a] hover:bg-red-50 rounded-xl transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            initIcons();
+        }
+
+        function renderEditForm(task) {
+            return `
+                <div class="bg-white rounded-[24px] border-2 border-[#6750a4] overflow-hidden shadow-xl animate-fade-in p-4 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-[#49454f] uppercase ml-1">Tanggal</label>
+                            <input type="date" id="edit-date" class="w-full px-3 py-2 text-xs border border-[#c4c6d0] rounded-xl outline-none bg-[#f7f9fc]" value="${task.date}">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-[#49454f] uppercase ml-1">Area</label>
+                            <input type="text" id="edit-area" class="w-full px-3 py-2 text-xs border border-[#c4c6d0] rounded-xl outline-none bg-[#f7f9fc]" value="${task.area}">
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-[#49454f] uppercase ml-1">Member</label>
+                        <input type="text" id="edit-member" class="w-full px-3 py-2 text-xs border border-[#c4c6d0] rounded-xl outline-none bg-[#f7f9fc]" value="${task.member}">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-[#49454f] uppercase ml-1">Nama Pekerjaan</label>
+                        <textarea id="edit-jobName" class="w-full px-3 py-2 text-xs font-bold border border-[#c4c6d0] rounded-xl outline-none bg-[#f7f9fc] min-h-[80px]">${task.jobName}</textarea>
+                    </div>
+                    <label class="flex items-center gap-3 py-2 bg-[#f3edf7] px-3 rounded-xl cursor-pointer hover:bg-[#eaddff] transition-colors">
+                        <input type="checkbox" id="edit-weekly" ${task.isWeekly ? 'checked' : ''} class="w-4 h-4 accent-[#6750a4]">
+                        <span class="text-[10px] font-black text-[#6750a4] uppercase tracking-wider">Terapkan Rutinitas Mingguan (+3 Minggu)</span>
+                    </label>
+                    <div class="flex gap-2">
+                        <button onclick="saveEdit(${task.id})" class="flex-1 py-2.5 bg-[#6750a4] text-white rounded-xl text-xs font-bold shadow-md hover:bg-[#4f378b]">Simpan</button>
+                        <button onclick="cancelAction()" class="flex-1 py-2.5 bg-white text-[#49454f] border border-[#e1e2e9] rounded-xl text-xs font-bold">Batal</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCopyForm(task) {
+            return `
+                <div class="bg-[#eaddff] rounded-[24px] border border-[#d0bcff] p-4 space-y-3 animate-fade-in shadow-lg">
+                    <p class="text-[10px] font-black text-[#21005d] flex items-center gap-2 uppercase tracking-widest"><i data-lucide="copy" class="w-3.5 h-3.5"></i> Salin Tugas Ke Tanggal:</p>
+                    <input type="date" id="copy-date" class="w-full px-4 py-3 border-none rounded-xl text-sm outline-none shadow-md" value="${task.date}">
+                    <div class="flex gap-2">
+                        <button onclick="saveCopy(${task.id})" class="flex-1 py-2.5 bg-[#6750a4] text-white rounded-xl text-xs font-bold">Salin Sekarang</button>
+                        <button onclick="cancelAction()" class="flex-1 py-2.5 bg-white text-[#49454f] rounded-xl text-xs font-bold">Batal</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Action Handlers
+        function startEdit(id) {
+            editingId = id;
+            copyingId = null;
+            renderTasks();
+        }
+
+        function startCopy(id) {
+            copyingId = id;
+            editingId = null;
+            renderTasks();
+        }
+
+        function cancelAction() {
+            editingId = null;
+            copyingId = null;
+            renderTasks();
+        }
+
+        function saveEdit(id) {
+            const date = document.getElementById('edit-date').value;
+            const area = document.getElementById('edit-area').value;
+            const member = document.getElementById('edit-member').value;
+            const jobName = document.getElementById('edit-jobName').value;
+            const isWeekly = document.getElementById('edit-weekly').checked;
+
+            let updatedTasks = tasks.map(t => t.id === id ? { ...t, date, area, member, jobName, isWeekly } : t);
+
+            if (isWeekly) {
+                const baseDate = new Date(date);
+                for (let w = 1; w <= 3; w++) {
+                    let nextDate = new Date(baseDate);
+                    nextDate.setDate(baseDate.getDate() + (w * 7));
+                    if (nextDate.getDay() === 0) nextDate.setDate(nextDate.getDate() + 1);
+                    updatedTasks.push({
+                        id: Date.now() + Math.random(),
+                        jobName, area, member,
+                        date: nextDate.toISOString().split('T')[0],
+                        isWeekly: true
+                    });
+                }
+            }
+
+            tasks = updatedTasks;
+            editingId = null;
+            updateTaskUI();
+        }
+
+        function saveCopy(id) {
+            const original = tasks.find(t => t.id === id);
+            const date = document.getElementById('copy-date').value;
+            if(!date) return;
+
+            const newTask = { ...original, id: Date.now() + Math.random(), date, isWeekly: false };
+            tasks = [newTask, ...tasks];
+            copyingId = null;
+            updateTaskUI();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            updateTaskUI();
+        }
+
+        document.getElementById('searchTask').oninput = () => renderTasks();
+
+        function downloadExcel() {
+            if (tasks.length === 0) return;
+            const headers = ["Hari", "Tanggal", "Nama Pekerjaan", "Area", "Member"];
+            
+            // Urutkan berdasarkan tanggal sebelum diekspor
+            const sortedTasks = [...tasks].sort((a,b) => new Date(a.date) - new Date(b.date));
+
+            const rows = sortedTasks.map(task => {
+                const d = new Date(task.date);
+                const dayName = d.toLocaleDateString('id-ID', { weekday: 'long' });
+                
+                // Format tanggal 01-03-2026 (DD-MM-YYYY)
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                const formattedDateStr = `${day}-${month}-${year}`;
+                
+                return [
+                    `"${dayName}"`, 
+                    `"${formattedDateStr}"`, 
+                    `"${task.jobName.replace(/"/g, '""')}"`, 
+                    `"${task.area.replace(/"/g, '""')}"`, 
+                    `"${task.member.replace(/"/g, '""')}"`
+                ];
+            });
+
+            const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+            const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `OCS_NFI_Schedule_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+
+        window.onload = () => {
+            renderQuotaButtons();
+            initIcons();
+        };
+    </script>
+</body>
+</html>
+
